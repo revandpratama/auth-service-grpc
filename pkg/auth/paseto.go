@@ -2,6 +2,7 @@ package auth
 
 import (
 	"errors"
+	"strconv"
 	"time"
 
 	"aidanwoods.dev/go-paseto"
@@ -19,7 +20,7 @@ func CreateToken(user *entity.User) (string, error) {
 	token.SetExpiration(time.Now().Add(2 * time.Minute))
 
 	//insert paylaod
-	token.SetString("user_id", user.ID.String())
+	token.SetString("user_id", strconv.Itoa(user.ID))
 	token.SetString("name", user.Name)
 	token.SetString("username", user.Username)
 	token.SetString("email", user.Email)
