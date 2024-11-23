@@ -3,14 +3,13 @@ package entity
 import (
 	"time"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type User struct {
-	ID        uuid.UUID `gorm:"primaryKey;default:uuid_generate_v4()"`
-	RoleID    int       `gorm:"column:role_id"`
-	Username  string    `gorm:"unique"`
+	ID        int    `gorm:"primaryKey;datatype:serial"`
+	RoleID    int    `gorm:"column:role_id"`
+	Username  string `gorm:"unique"`
 	Name      string
 	Email     string `gorm:"unique"`
 	Password  string
