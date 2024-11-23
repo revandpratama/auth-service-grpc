@@ -31,6 +31,9 @@ func (s *authService) Login(context context.Context, req *dto.LoginRequest) (*dt
 	}
 
 	//verify password
+	if err := auth.ValidatePassword(user.Password, req.Password); err != nil {
+		return nil, err
+	}
 
 	token, err := auth.CreateToken(user)
 	if err != nil {
