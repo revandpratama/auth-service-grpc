@@ -2,7 +2,6 @@ package adapter
 
 import (
 	"fmt"
-	"log"
 	"net"
 
 	"github.com/revandpratama/reflect/auth-service/internal/controller"
@@ -24,11 +23,10 @@ func StartGRPCServer(srv *controller.AuthController) error {
 		})
 		return err
 	}
-	log.Println("2")
+
 	grpcServer := grpc.NewServer()
 
 	pb.RegisterAuthServiceServer(grpcServer, srv)
-	log.Println("3")
 
 	logger.MakeLog(logger.Logger{
 		Level:   logger.LEVEL_INFO,

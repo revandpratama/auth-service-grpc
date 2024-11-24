@@ -32,16 +32,17 @@ func (s *Server) Start() {
 	//initialize app
 	adapter.LoadConfig()
 	adapter.ConnectDB()
-	log.Println("1")
+
 	authRepository := repository.NewAuthRepository(adapter.DB)
 	authService := service.NewAuthService(authRepository)
 	authController := controller.NewAuthController(authService)
 
+	logger.MakeLog(logger.Logger{
+		Level:   logger.LEVEL_INFO,
+		Message: "starting grpc server...",
+	})
+
 	go func() {
-		logger.MakeLog(logger.Logger{
-			Level:   logger.LEVEL_INFO,
-			Message: "starting grpc server...",
-		})
 
 		if err := adapter.StartGRPCServer(authController); err != nil {
 			log.Printf("Error starting gRPC server: %v", err)
@@ -49,7 +50,17 @@ func (s *Server) Start() {
 		}
 	}()
 
+	logger.MakeLog(logger.Logger{
+		Level:   logger.LEVEL_INFO,
+		Message: "starting grpc server started",
+	})
+
 	client.TestClient()
+
+	logger.MakeLog(logger.Logger{
+		Level:   logger.LEVEL_INFO,
+		Message: "server started",
+	})
 
 	select {
 	case sig := <-s.shutdown:
