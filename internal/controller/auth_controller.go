@@ -5,6 +5,8 @@ import (
 
 	"github.com/revandpratama/reflect/auth-service/internal/dto"
 	"github.com/revandpratama/reflect/auth-service/internal/service"
+	"github.com/revandpratama/reflect/auth-service/pkg/auth"
+	"github.com/revandpratama/reflect/auth-service/pkg/logger"
 	pb "github.com/revandpratama/reflect/auth-service/proto/generated/auth"
 )
 
@@ -51,8 +53,39 @@ func (c *AuthController) Register(context context.Context, req *pb.RegisterReque
 	}
 
 	return &pb.RegisterResponse{
-		Status: "success",
+		Status:  "success",
 		Message: "success register user",
 	}, nil
 
+}
+
+func (c *AuthController) ValidateToken(context context.Context, req *pb.TokenRequest) (*pb.TokenResponse, error) {
+
+	token := req.AccessToken
+
+	user, err := auth.VerifyToken(token)
+	if err != nil {
+
+		logger.MakeLog(logger.Logger{
+			Level:  logger.LEVEL_ERROR,
+			Message: err.Error(),
+		})
+
+		return &pb.TokenResponse{
+			Status:  "error",
+			Message: "unauthorized",
+		}, nil
+	}
+
+	return &pb.TokenResponse{
+		Status:  "success",
+		Message: "authorized",
+		User: &pb.User{
+			Id:       int64(user.ID),
+			RoleId:   int64(user.RoleID),
+			Name:     user.Name,
+			Username: user.Username,
+			Email:    user.Email,
+		},
+	}, nil
 }
