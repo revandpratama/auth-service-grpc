@@ -30,7 +30,10 @@ func (c *AuthController) Login(context context.Context, req *pb.LoginRequest) (*
 
 	response, err := c.service.Login(context, &request)
 	if err != nil {
-		return nil, err
+		logger.MakeLog(logger.Logger{
+			Level:  logger.LEVEL_ERROR,
+			Message: err.Error(),
+		})
 	}
 
 	return &pb.LoginResponse{
@@ -49,7 +52,15 @@ func (c *AuthController) Register(context context.Context, req *pb.RegisterReque
 
 	err := c.service.Register(context, &request)
 	if err != nil {
-		return nil, err
+		logger.MakeLog(logger.Logger{
+			Level:  logger.LEVEL_ERROR,
+			Message: err.Error(),
+		})
+
+		return &pb.RegisterResponse{
+			Status:  "error",
+			Message: err.Error(),
+		}, nil
 	}
 
 	return &pb.RegisterResponse{
