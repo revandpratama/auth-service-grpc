@@ -35,3 +35,24 @@ func (c *AuthController) Login(context context.Context, req *pb.LoginRequest) (*
 		AccessToken: response.AccessToken,
 	}, nil
 }
+
+func (c *AuthController) Register(context context.Context, req *pb.RegisterRequest) (*pb.RegisterResponse, error) {
+
+	request := dto.RegisterRequest{
+		Name:     req.Name,
+		Email:    req.Email,
+		Username: req.Username,
+		Password: req.Password,
+	}
+
+	err := c.service.Register(context, &request)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.RegisterResponse{
+		Status: "success",
+		Message: "success register user",
+	}, nil
+
+}
