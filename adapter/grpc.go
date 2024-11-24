@@ -15,13 +15,14 @@ type GRPCServer struct {
 	pb.UnimplementedAuthServiceServer
 }
 
-func StartGRPCServer(srv *controller.AuthController) {
+func StartGRPCServer(srv *controller.AuthController) error {
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%s", ENV.GRPCServerPort))
 	if err != nil {
 		logger.MakeLog(logger.Logger{
 			Level:   logger.LEVEL_FATAL,
 			Message: fmt.Sprintf("Failed to listen: %v", err),
 		})
+		return err
 	}
 	log.Println("2")
 	grpcServer := grpc.NewServer()
@@ -33,17 +34,19 @@ func StartGRPCServer(srv *controller.AuthController) {
 		Level:   logger.LEVEL_INFO,
 		Message: "grpc server connected...",
 	})
-	go func() {
-		if err := grpcServer.Serve(listener); err != nil {
-			logger.MakeLog(logger.Logger{
-				Level:   logger.LEVEL_FATAL,
-				Message: fmt.Sprintf("Failed to serve: %v", err),
-			})
-		}
-	}()
+
+	if err := grpcServer.Serve(listener); err != nil {
+		logger.MakeLog(logger.Logger{
+			Level:   logger.LEVEL_FATAL,
+			Message: fmt.Sprintf("Failed to serve: %v", err),
+		})
+		return err
+	}
 
 	logger.MakeLog(logger.Logger{
 		Level:   logger.LEVEL_INFO,
 		Message: "grpc server connected...",
 	})
+
+	return nil
 }
