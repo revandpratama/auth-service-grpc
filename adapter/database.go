@@ -41,7 +41,10 @@ func ConnectDB() {
 
 	dsn := config.FormatDSN()
 
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(postgres.New(postgres.Config{
+		DSN:                  dsn,
+		PreferSimpleProtocol: true,
+	}), &gorm.Config{})
 	if err != nil {
 		logger.MakeLog(logger.Logger{
 			Level:   logger.LEVEL_FATAL,
@@ -51,6 +54,13 @@ func ConnectDB() {
 	}
 
 	DB = db
+
+	// if err := dropTable(db, "users", "roles"); err != nil {
+	// 	logger.MakeLog(logger.Logger{
+	// 		Level:   logger.LEVEL_ERROR,
+	// 		Message: fmt.Sprintf("migrate error: %v", err.Error()),
+	// 	})
+	// }
 
 	if err := autoMigrate(db); err != nil {
 		logger.MakeLog(logger.Logger{
@@ -65,10 +75,20 @@ func ConnectDB() {
 	})
 }
 
-
 func autoMigrate(db *gorm.DB) error {
 
 	err := db.AutoMigrate(&entity.User{}, &entity.Role{})
 
 	return err
 }
+
+// func dropTable(db *gorm.DB, tables ...string) error {
+// 	for _, tablename := range tables {
+// 		err := db.Exec(fmt.Sprintf("DROP TABLE authentication.%s", tablename)).Error
+// 		if err != nil {
+// 			return err
+// 		}
+// 	}
+
+// 	return nil
+// }
