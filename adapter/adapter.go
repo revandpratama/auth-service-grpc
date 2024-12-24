@@ -3,13 +3,14 @@ package adapter
 import (
 	"fmt"
 
+	"github.com/twmb/franz-go/pkg/kgo"
 	"google.golang.org/grpc"
 	"gorm.io/gorm"
 )
 
 type Adapter struct {
-	Postgres *gorm.DB
-
+	Postgres   *gorm.DB
+	Kafka      *kgo.Client
 	GRPCServer *grpc.Server
 }
 
