@@ -2,36 +2,61 @@ package server
 
 import (
 	"fmt"
-	"log"
+	"net"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/revandpratama/reflect/auth-service/adapter"
 	"github.com/revandpratama/reflect/auth-service/client"
+	"github.com/revandpratama/reflect/auth-service/config"
 	"github.com/revandpratama/reflect/auth-service/internal/controller"
 	"github.com/revandpratama/reflect/auth-service/internal/repository"
 	"github.com/revandpratama/reflect/auth-service/internal/service"
 	"github.com/revandpratama/reflect/auth-service/pkg/logger"
+	pb "github.com/revandpratama/reflect/auth-service/proto/generated/auth"
+	"google.golang.org/grpc"
 )
 
 type Server struct {
-	shutdown chan os.Signal
-	done     chan bool
+	shutdown     chan os.Signal
+	errorOccured chan error
 }
 
 func NewServer() *Server {
 	return &Server{
-		shutdown: make(chan os.Signal, 1),
-		done:     make(chan bool, 1),
+		shutdown:     make(chan os.Signal, 1),
+		errorOccured: make(chan error, 1),
 	}
 }
 
 func (s *Server) Start() {
 	signal.Notify(s.shutdown, os.Interrupt, syscall.SIGTERM)
-	//initialize app
-	adapter.LoadConfig()
-	adapter.ConnectDB()
+
+	if err := config.LoadConfig(); err != nil {
+		logger.MakeLog(logger.Logger{
+			Level:   logger.LEVEL_FATAL,
+			Message: fmt.Sprintf("failed to initialize config : %v", err),
+		})
+		s.errorOccured <- err
+	}
+
+	logger.MakeLog(logger.Logger{
+		Level:   logger.LEVEL_INFO,
+		Message: "config running...",
+	})
+
+	err := adapter.Adapters.Sync(
+		adapter.Postgres(),
+		adapter.GRPC(),
+	)
+	if err != nil {
+		logger.MakeLog(logger.Logger{
+			Level:   logger.LEVEL_FATAL,
+			Message: fmt.Sprintf("failed to start adapter : %v", err),
+		})
+		s.errorOccured <- err
+	}
 
 	authRepository := repository.NewAuthRepository(adapter.DB)
 	authService := service.NewAuthService(authRepository)
@@ -42,36 +67,47 @@ func (s *Server) Start() {
 		Message: "starting grpc server...",
 	})
 
-	go func() {
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%s", config.ENV.GRPCServerPort))
+	if err != nil {
+		logger.MakeLog(logger.Logger{
+			Level:   logger.LEVEL_FATAL,
+			Message: fmt.Sprintf("failed to listen: %v", err),
+		})
+		s.errorOccured <- err
+	}
 
-		if err := adapter.StartGRPCServer(authController); err != nil {
-			log.Printf("Error starting gRPC server: %v", err)
-			s.done <- true
+	grpcServer := grpc.NewServer()
+	pb.RegisterAuthServiceServer(grpcServer, authController)
+
+	go func() {
+		if err := grpcServer.Serve(listener); err != nil {
+			s.errorOccured <- err
 		}
 	}()
 
 	logger.MakeLog(logger.Logger{
 		Level:   logger.LEVEL_INFO,
-		Message: "starting grpc server started",
+		Message: "grpc server running...",
 	})
 
+	// ! Testing only
 	client.TestClient()
 
 	logger.MakeLog(logger.Logger{
 		Level:   logger.LEVEL_INFO,
-		Message: "server started",
+		Message: "server is running",
 	})
 
 	select {
 	case sig := <-s.shutdown:
 		logger.MakeLog(logger.Logger{
 			Level:   logger.LEVEL_INFO,
-			Message: fmt.Sprintf("shutting down... :%v", sig),
+			Message: fmt.Sprintf("shutting down... , cause: %v", sig),
 		})
-	case <-s.done:
+	case err := <-s.errorOccured:
 		logger.MakeLog(logger.Logger{
 			Level:   logger.LEVEL_FATAL,
-			Message: "server stopped due to error",
+			Message: fmt.Sprintf("Server stopped due to error: %v", err),
 		})
 	}
 
@@ -82,32 +118,21 @@ func (s *Server) Start() {
 func (s *Server) cleanup() {
 	// Add cleanup logic here
 	logger.MakeLog(logger.Logger{
-		Level:   logger.LEVEL_WARN,
+		Level:   logger.LEVEL_INFO,
 		Message: "cleaning up resources...",
 	})
 
-	sqlDB, err := adapter.DB.DB()
+	err := adapter.Adapters.Unsync()
 	if err != nil {
 		logger.MakeLog(logger.Logger{
 			Level:   logger.LEVEL_ERROR,
-			Message: err.Error(),
+			Message: fmt.Sprintf("Error cleaning up adapters: %v", err),
 		})
 	}
-	// Close database connection
-	if sqlDB != nil {
-		if err := sqlDB.Close(); err != nil {
-			logger.MakeLog(logger.Logger{
-				Level:   logger.LEVEL_ERROR,
-				Message: fmt.Sprintf("Error closing database connection: %v", err),
-			})
-
-		}
-	}
-
-	// Add any other cleanup tasks here
 
 	logger.MakeLog(logger.Logger{
 		Level:   logger.LEVEL_INFO,
 		Message: "server shutdown complete",
 	})
+
 }
