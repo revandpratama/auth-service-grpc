@@ -1,8 +1,9 @@
 package adapter
 
 import (
-	"log"
+	"fmt"
 
+	"github.com/revandpratama/reflect/auth-service/config"
 	"github.com/twmb/franz-go/pkg/kgo"
 )
 
@@ -16,15 +17,10 @@ func FranzKafka() Option {
 
 func (k *franzKafka) Start(a *Adapter) error {
 
-	topics := []string{"generalauthservice"}
-
 	client, err := kgo.NewClient(
-		kgo.SeedBrokers("localhost:9092"), 
-		kgo.ClientID("client-id"),
-		kgo.ConsumeTopics(topics...), 
-		// kgo.ConsumerGroup("group1"),       
-		// kgo.AutoCommitMarks(),
-		// kgo.ConsumeResetOffset(kgo.NewOffset().AtStart()),
+		kgo.SeedBrokers(fmt.Sprintf("%v:%v", config.ENV.KafkaHost, config.ENV.KafkaPort)), // Replace with your Kafka broker address
+		kgo.ClientID(config.ENV.KafkaClientID),
+		kgo.DefaultProduceTopic(config.ENV.KafkaTopic), // Default topic
 	)
 	if err != nil {
 		return err
@@ -39,7 +35,6 @@ func (k *franzKafka) Start(a *Adapter) error {
 func (k *franzKafka) Stop() error {
 
 	k.adapter.Kafka.Close()
-	log.Println("Kafka (franz) stopped")
 
 	return nil
 }
