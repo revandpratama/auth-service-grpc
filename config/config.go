@@ -17,6 +17,7 @@ type Config struct {
 	KafkaHost     string
 	KafkaPort     string
 	KafkaClientID string
+	KafkaTopic    string
 }
 
 var ENV *Config
