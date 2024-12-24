@@ -1,14 +1,16 @@
 package adapter
 
 import (
-	"errors"
 	"fmt"
 
+	"google.golang.org/grpc"
 	"gorm.io/gorm"
 )
 
 type Adapter struct {
 	Postgres *gorm.DB
+
+	GRPCServer *grpc.Server
 }
 
 type Option interface {
@@ -31,7 +33,7 @@ func (a *Adapter) Sync(opts ...Option) error {
 	}
 
 	if len(syncErrors) > 0 {
-		return errors.New(fmt.Sprintf("sync adapter errors: %v", syncErrors))
+		return fmt.Errorf("sync adapter errors: %v", syncErrors)
 	}
 
 	return nil
@@ -47,7 +49,7 @@ func (a *Adapter) Unsync() error {
 	}
 
 	if len(unsyncErrors) > 0 {
-		return errors.New(fmt.Sprintf("unsync adapter errors: %v", unsyncErrors))
+		return fmt.Errorf("unsync adapter errors: %v", unsyncErrors)
 	}
 
 	return nil
